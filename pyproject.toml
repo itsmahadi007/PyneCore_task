@@ -5,5 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "ccxt>=4.4.92",
+    "pandas>=2.3.1",
+    "plotly>=6.2.0",
     "pynesys-pynecore[all,cli]>=6.0.14",
 ]
