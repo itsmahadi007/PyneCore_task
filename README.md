@@ -139,6 +139,23 @@ This visualization includes:
   - Green dotted line (0.5): Low volatility threshold
 - **Interactive Features**: Zoom, pan, hover tooltips, and time range selection
 
+## How to Open the Visualization
+
+After running the programmatic script, you can open the generated interactive chart directly in your browser:
+
+- **Windows:**  
+  Double-click the file at  
+  `g:\Coding\PyneCore_task\visualize_html_file\cwr_visualization.html`
+
+- **macOS/Linux:**  
+  Open a terminal and run:  
+  ```bash
+  open ./visualize_html_file/cwr_visualization.html
+  ```
+  (On Linux, use `xdg-open` instead of `open`.)
+
+Alternatively, right-click the file and choose "Open with" → your preferred web browser.
+
 ## Understanding the Results
 
 ### CSV Data Columns
