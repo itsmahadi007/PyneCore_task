@@ -1,0 +1,9 @@
+[project]
+name = "pynecore-task"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "ccxt>=4.4.92",
+    "pynesys-pynecore[cli]>=6.0.14",
+]
