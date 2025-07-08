@@ -78,8 +78,6 @@ def run_cwr_programmatically():
             print("\nPyneCore script executed successfully!")
             print(f"Results saved to:")
             print(f"  Plot data: {plot_path}")
-            print(f"  Strategy stats: {strat_path}")
-            print(f"  Equity curve: {equity_path}")
             
             # Generate visualization
             chart_path = create_cwr_visualization(plot_path, output_dir)

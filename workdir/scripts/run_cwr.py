@@ -2,7 +2,7 @@
 from pynecore.lib import script, high, low, color, plot
 from pynecore.lib.ta import sma
 
-@script.indicator(title="Candle Widening Ratio (CWR)", overlay=False)
+@script.indicator(title="Candle Widening Ratio (CWR)", overlay=True)
 def main(length: int = 20):
     current_range = high - low
     average_range = sma(current_range, length)

@@ -1,7 +1,7 @@
 # Indicator / Strategy / Library Settings
 
 [script]
-#overlay = false
+#overlay = true
 #format = "inherit"
 #precision =
 #scale =
