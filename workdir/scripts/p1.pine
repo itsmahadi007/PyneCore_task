@@ -1,0 +1,22 @@
+//@version=6
+strategy("Moving Average Crossover - Actually Works", overlay=true)
+
+// Let users adjust these settings
+fastLength = input(9, title="Fast MA Length")
+slowLength = input(21, title="Slow MA Length")
+
+// Calculate the moving averages
+fastMA = ta.sma(close, fastLength)
+slowMA = ta.sma(close, slowLength)
+
+// Draw them on the chart
+plot(fastMA, color=color.green, title="Fast MA")
+plot(slowMA, color=color.red, title="Slow MA")
+
+// Buy when fast MA crosses above slow MA
+if (ta.crossover(fastMA, slowMA))
+    strategy.entry("Long", strategy.long)
+
+// Sell when fast MA crosses below slow MA
+if (ta.crossunder(fastMA, slowMA))
+    strategy.close("Long")
