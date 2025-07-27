@@ -10,7 +10,7 @@ from pynecore.core.syminfo import SymInfo
 from pynecore.core.script_runner import ScriptRunner
 
 # Global configuration
-FILE_NAME = "run_cwr"
+FILE_NAME = "p2"
 CHART_FILENAME = f"{FILE_NAME}_visualization.html"
 SCRIPT_NAME = f"{FILE_NAME}.py"
 
@@ -106,19 +106,37 @@ def create_dynamic_visualization(csv_path: Path, output_dir: Path) -> Path:
     # Identify indicator columns (non-OHLCV, non-time columns)
     indicator_cols = [col for col in df.columns if col not in ohlcv_cols + ['time']]
     
-    # Filter out rows with NaN values in indicator columns
-    if indicator_cols:
-        df_with_indicators = df.dropna(subset=indicator_cols)
+    # Detect signal columns (typically binary 0/1 values for buy/sell signals)
+    signal_cols = []
+    line_indicator_cols = []
+    
+    # Analyze indicator columns to separate signals from continuous indicators
+    for col in indicator_cols:
+        # Check if column contains mostly NaN/0 values with occasional 1s (typical for signals)
+        non_na_values = df[col].dropna()
+        if len(non_na_values) > 0:
+            unique_vals = non_na_values.unique()
+            # If column has binary values or very few unique values, treat as signal
+            if set(unique_vals).issubset({0, 1}) or (len(unique_vals) <= 3 and non_na_values.max() <= 1):
+                signal_cols.append(col)
+            else:
+                line_indicator_cols.append(col)
+        else:
+            line_indicator_cols.append(col)
+    
+    # Filter out rows with NaN values in indicator columns for line charts
+    if line_indicator_cols:
+        df_with_indicators = df.dropna(subset=line_indicator_cols)
     else:
         df_with_indicators = df
     
     # Determine if we need subplots based on available indicators
-    if indicator_cols:
+    if line_indicator_cols:
         fig = make_subplots(
             rows=2, cols=1,
             shared_xaxes=True,
             vertical_spacing=0.1,
-            subplot_titles=('BTC/USDT Price Chart', f'Indicators ({', '.join(indicator_cols)})'),
+            subplot_titles=('BTC/USDT Price Chart', f'Indicators ({', '.join(line_indicator_cols)})'),
             row_heights=[0.7, 0.3]
         )
         indicator_row = 2
@@ -145,9 +163,9 @@ def create_dynamic_visualization(csv_path: Path, output_dir: Path) -> Path:
     )
     
     # Add indicator lines if available
-    if indicator_cols:
+    if line_indicator_cols:
         colors = ['#2E86AB', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
-        for i, col in enumerate(indicator_cols):
+        for i, col in enumerate(line_indicator_cols):
             color = colors[i % len(colors)]
             fig.add_trace(
                 go.Scatter(
@@ -160,8 +178,54 @@ def create_dynamic_visualization(csv_path: Path, output_dir: Path) -> Path:
                 row=indicator_row, col=1
             )
     
+    # Add buy/sell signals if detected
+    for col in signal_cols:
+        # Get non-NaN signal points
+        signal_df = df[df[col].notna() & (df[col] != 0)]
+        
+        if not signal_df.empty:
+            # Determine if this is likely a buy or sell signal based on column name
+            is_buy_signal = any(term in col.lower() for term in ['buy', 'long', 'up'])
+            is_sell_signal = any(term in col.lower() for term in ['sell', 'short', 'down'])
+            
+            # Default to buy signal if can't determine
+            if not (is_buy_signal or is_sell_signal):
+                is_buy_signal = True
+            
+            # Set marker properties based on signal type
+            if is_buy_signal:
+                marker_color = 'green'
+                marker_symbol = 'triangle-up'
+                marker_size = 10
+                signal_name = f"Buy Signal ({col})"
+                # Position below candle
+                y_values = signal_df['low'] * 0.995  # Slightly below the low price
+            else:  # sell signal
+                marker_color = 'red'
+                marker_symbol = 'triangle-down'
+                marker_size = 10
+                signal_name = f"Sell Signal ({col})"
+                # Position above candle
+                y_values = signal_df['high'] * 1.005  # Slightly above the high price
+            
+            # Add the signal markers
+            fig.add_trace(
+                go.Scatter(
+                    x=signal_df['time'],
+                    y=y_values,
+                    mode='markers',
+                    name=signal_name,
+                    marker=dict(
+                        color=marker_color,
+                        size=marker_size,
+                        symbol=marker_symbol
+                    )
+                ),
+                row=1, col=1
+            )
+    
     # Add reference lines for specific indicators
-    if 'cwr' in indicator_cols:
+    if 'cwr' in line_indicator_cols:
         fig.add_hline(y=1.0, line_dash="dash", line_color="gray", 
                       annotation_text="Baseline (1.0)", row=indicator_row, col=1)
         fig.add_hline(y=1.5, line_dash="dot", line_color="red", 
@@ -169,16 +233,22 @@ def create_dynamic_visualization(csv_path: Path, output_dir: Path) -> Path:
         fig.add_hline(y=0.5, line_dash="dot", line_color="green", 
                       annotation_text="Low Volatility (0.5)", row=indicator_row, col=1)
     
-    # Determine chart title based on indicators
-    if 'cwr' in indicator_cols:
-        chart_title = 'BTC/USDT Price Chart with Candle Widening Ratio (CWR) Indicator'
+    # Determine chart title based on indicators and script name
+    script_name = csv_path.stem
+    
+    if 'cwr' in line_indicator_cols:
+        chart_title = f'{script_name} - BTC/USDT with Candle Widening Ratio (CWR) Indicator'
         indicator_title = 'CWR Value'
-    elif indicator_cols:
-        chart_title = f'BTC/USDT Price Chart with {', '.join(indicator_cols)} Indicators'
+    elif line_indicator_cols:
+        chart_title = f'{script_name} - BTC/USDT with {', '.join(line_indicator_cols)} Indicators'
         indicator_title = 'Indicator Values'
     else:
-        chart_title = 'BTC/USDT Price Chart'
+        chart_title = f'{script_name} - BTC/USDT Price Chart'
         indicator_title = ''
+    
+    # Add signal information to title if present
+    if signal_cols:
+        chart_title += f" and {len(signal_cols)} Trading Signals"
     
     # Update layout
     layout_config = {
@@ -196,7 +266,7 @@ def create_dynamic_visualization(csv_path: Path, output_dir: Path) -> Path:
         'template': 'plotly_white'
     }
     
-    if indicator_cols:
+    if line_indicator_cols:
         layout_config['yaxis2_title'] = indicator_title
     
     fig.update_layout(**layout_config)
